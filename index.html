@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Frog Quest</title>
+<style>
+:root{
+  --bg:#f2f2f7; --card:#ffffff; --text:#1c1c1e; --sub:#8e8e93; --line:rgba(60,60,67,.12);
+  --accent:#0a84ff; --frog:#34c759; --danger:#ff453a;
+  --font:-apple-system,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
+  --spring:cubic-bezier(.34,1.56,.64,1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .5s,color .5s;overflow-x:hidden}
+.app{max-width:440px;margin:0 auto;padding:18px 16px 90px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.top h1{font-size:13px;font-weight:600;color:var(--sub);margin:0;letter-spacing:.2px}
+.top h2{font-size:26px;margin:2px 0 0;font-weight:700;letter-spacing:-.5px}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:0;background:var(--card);color:var(--text);font-size:17px;cursor:pointer;box-shadow:0 1px 0 var(--line);transition:transform .35s var(--spring)}
+.icon-btn:active{transform:scale(.85) rotate(30deg)}
+
+/* scoreboard */
+.score{background:var(--card);border-radius:26px;padding:16px;display:grid;grid-template-columns:92px 1fr;gap:14px;align-items:center;position:relative;overflow:hidden;transition:background .5s}
+.score::after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;border-radius:50%;background:var(--accent);opacity:.12;filter:blur(8px);transition:background .5s}
+.ring{position:relative;width:92px;height:92px}
+.ring svg{transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:var(--accent);stroke-dasharray:238.76;stroke-dashoffset:238.76;transition:stroke-dashoffset .9s var(--spring),stroke .5s}
+.ring .mid{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-weight:700;font-size:20px;line-height:1}
+.ring .mid small{display:block;font-size:10px;color:var(--sub);font-weight:500;margin-top:3px}
+.stats{position:relative;z-index:1}
+.pts{font-size:38px;font-weight:800;letter-spacing:-1.5px;line-height:1;font-variant-numeric:tabular-nums}
+.pts span{font-size:13px;font-weight:600;color:var(--sub);letter-spacing:0;margin-left:4px}
+.chips{display:flex;gap:6px;margin:9px 0 8px;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:600;padding:4px 9px;border-radius:99px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.chip.f{background:color-mix(in srgb,var(--frog) 16%,transparent);color:var(--frog)}
+.lvl{height:6px;border-radius:9px;background:var(--line);overflow:hidden}
+.lvl i{display:block;height:100%;width:0;border-radius:9px;background:var(--accent);transition:width .9s var(--spring),background .5s}
+.lvltxt{font-size:11px;color:var(--sub);margin-top:5px}
+
+/* add */
+.add{display:flex;gap:8px;margin:14px 0 6px}
+.add input[type=text]{flex:1;min-width:0;border:0;outline:0;background:var(--card);color:var(--text);font:inherit;font-size:16px;padding:14px 16px;border-radius:18px;transition:box-shadow .3s,background .5s}
+.add input[type=text]:focus{box-shadow:0 0 0 2px var(--accent)}
+.add input[type=time]{display:none;border:0;background:var(--card);color:var(--text);font:inherit;border-radius:18px;padding:0 10px}
+.add.pertask input[type=time]{display:block}
+.add button{width:50px;border:0;border-radius:18px;background:var(--accent);color:#fff;font-size:24px;cursor:pointer;transition:transform .3s var(--spring),background .5s}
+.add button:active{transform:scale(.88)}
+.tip{font-size:11.5px;color:var(--sub);text-align:center;margin:2px 0 10px}
+
+/* rows */
+.row{position:relative;margin-bottom:9px;border-radius:20px;touch-action:pan-y}
+.hint{position:absolute;inset:0;border-radius:20px;display:flex;align-items:center;padding:0 20px;font-weight:700;font-size:14px;color:#fff;opacity:0;transition:opacity .2s}
+.hint.r{background:var(--frog);justify-content:flex-start}
+.hint.l{background:var(--danger);justify-content:flex-end}
+.card{position:relative;display:flex;align-items:center;gap:12px;padding:14px 14px;border-radius:20px;background:var(--card);cursor:pointer;user-select:none;touch-action:pan-y;
+  transition:transform .35s var(--spring),background .5s,box-shadow .4s;box-shadow:0 1px 0 var(--line)}
+.card.drag{transition:none}
+.card.pop{animation:pop .55s var(--spring)}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.07)}100%{transform:scale(1)}}
+.card.enter{animation:enter .5s var(--spring)}
+@keyframes enter{from{transform:translateY(-14px) scale(.94);opacity:0}to{transform:none;opacity:1}}
+.chk{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid color-mix(in srgb,var(--sub) 60%,transparent);display:grid;place-items:center;transition:all .35s var(--spring)}
+.chk svg{width:14px;height:14px;stroke:#fff;stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:20;stroke-dashoffset:20;transition:stroke-dashoffset .4s .1s}
+.card.done .chk{background:var(--accent);border-color:var(--accent);transform:scale(1.08)}
+.card.done .chk svg{stroke-dashoffset:0}
+.t{flex:1;min-width:0;font-size:16px;font-weight:500;line-height:1.3;position:relative}
+.t em{display:block;font-style:normal;font-size:11.5px;color:var(--sub);margin-top:2px}
+.t b{position:relative;font-weight:inherit;background:linear-gradient(currentColor,currentColor) no-repeat 0 55%/0 2px;transition:background-size .45s ease}
+.card.done{opacity:.5}
+.card.done .t b{background-size:100% 2px}
+.pill{flex:none;font-size:12px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
+
+/* frog card */
+.card.frog{padding:18px 16px;background:linear-gradient(135deg,var(--frog),color-mix(in srgb,var(--frog) 62%,#000));color:#fff;box-shadow:0 10px 28px -10px var(--frog)}
+.card.frog .chk{border-color:rgba(255,255,255,.7)}
+.card.frog.done .chk{background:#fff;border-color:#fff}
+.card.frog.done .chk svg{stroke:var(--frog)}
+.card.frog .t{font-size:18px;font-weight:700}
+.card.frog .t em,.card.frog .pill{color:rgba(255,255,255,.8)}
+.card.frog::before{content:"🐸";position:absolute;right:12px;top:-12px;font-size:26px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.25));animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px) rotate(8deg)}}
+.card.frog.done{opacity:.75}
+
+
+/* view toggle */
+.vseg{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px}
+.vseg .tip{margin:0;text-align:left;flex:1;line-height:1.35}
+
+#vseg button{font-size:13px;padding:11px 4px}
+/* grid / tiles */
+.zone{border-radius:24px;padding:10px;margin-bottom:12px;border:2px dashed var(--line);transition:all .3s var(--spring);position:relative}
+.zone.fz{border-color:color-mix(in srgb,var(--frog) 45%,transparent);background:color-mix(in srgb,var(--frog) 7%,transparent)}
+.zone.over{transform:scale(1.015);border-style:solid;background:color-mix(in srgb,var(--frog) 18%,transparent)}
+.zone.nz.over{background:color-mix(in srgb,var(--accent) 10%,transparent);border-color:var(--accent)}
+.zl{font-size:12px;font-weight:700;color:var(--sub);margin:0 4px 8px}
+.ph{color:var(--sub);font-size:13px;text-align:center;padding:22px 0;grid-column:1/-1}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tw,96px),1fr));gap:var(--tg,8px)}
+.tile{position:relative;aspect-ratio:1;border-radius:var(--tr,16px);background:var(--card);padding:var(--tp,9px);display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none;touch-action:none;
+  transition:transform .35s var(--spring),opacity .4s,background .5s;box-shadow:0 1px 0 var(--line)}
+.tile.lift{transition:none;z-index:50;cursor:grabbing;box-shadow:0 22px 40px -12px rgba(0,0,0,.5)}
+.tile.pop{animation:pop .55s var(--spring)}
+.tile.enter{animation:enter .5s var(--spring)}
+.tile .top2{display:flex;justify-content:space-between;align-items:flex-start}
+.tile .tt{font-size:var(--tf,12px);font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.tile .tt b{font-weight:inherit;background:linear-gradient(currentColor,currentColor) no-repeat 0 55%/0 2px;transition:background-size .45s ease}
+.tile .tt em{display:block;font-style:normal;font-size:calc(var(--tf,12px)*.8);color:var(--sub);margin-top:3px;font-weight:500}
+.tile.done{opacity:.5}
+.tile.done .tt b{background-size:100% 2px}
+.tile.done .chk{background:var(--accent);border-color:var(--accent);transform:scale(1.08)}
+.tile.done .chk svg{stroke-dashoffset:0}
+.tile.frog{background:linear-gradient(135deg,var(--frog),color-mix(in srgb,var(--frog) 62%,#000));color:#fff;box-shadow:0 10px 28px -10px var(--frog)}
+.tile.frog .chk{border-color:rgba(255,255,255,.7)}
+.tile.frog.done .chk{background:#fff;border-color:#fff}
+.tile.frog.done .chk svg{stroke:var(--frog)}
+.tile.frog .pill,.tile.frog .tt em{color:rgba(255,255,255,.8)}
+.tile.frog .tt{font-weight:700}
+.tile.frog::before{content:"🐸";position:absolute;right:12px;top:-12px;font-size:26px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.25));animation:bob 2.6s ease-in-out infinite}
+.tile.frog .top2{padding-right:0}
+.slot{aspect-ratio:1;border-radius:var(--tr,16px);border:2px dashed color-mix(in srgb,var(--frog) 55%,transparent);background:color-mix(in srgb,var(--frog) 8%,transparent);display:grid;place-items:center;font-size:calc(var(--tf,12px)*1.8);transition:transform .3s var(--spring),background .3s}
+.slot.over,.tile.over{transform:scale(1.07);outline:2px solid var(--frog);outline-offset:2px}
+.slot.over{background:color-mix(in srgb,var(--frog) 22%,transparent)}
+.tile .chk{width:calc(var(--tf,12px)*1.7);height:calc(var(--tf,12px)*1.7);border-width:2px}
+.tile .chk svg{width:55%;height:55%}
+.tile .pill{font-size:calc(var(--tf,12px)*.85)}
+.tile.frog::before{font-size:calc(var(--tf,12px)*2)}
+.sizebar{display:none;align-items:center;gap:10px;margin:10px 2px 0;font-size:11.5px;color:var(--sub);font-weight:600}
+.sizebar input{flex:1;accent-color:var(--accent);min-width:0}
+.sizebar b{min-width:38px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+.trash{position:fixed;left:50%;bottom:20px;transform:translate(-50%,130px);width:min(300px,80vw);padding:16px;border-radius:20px;background:var(--danger);color:#fff;font-weight:700;text-align:center;z-index:45;transition:transform .4s var(--spring);opacity:.92;pointer-events:none}
+.trash.on{transform:translate(-50%,0)}
+.trash.over{transform:translate(-50%,0) scale(1.08);opacity:1}
+.float{position:fixed;z-index:50;pointer-events:none;font-weight:800;font-size:20px;color:var(--accent);animation:fl 1s ease-out forwards}
+@keyframes fl{to{transform:translateY(-70px) scale(1.3);opacity:0}}
+canvas#cf{position:fixed;inset:0;pointer-events:none;z-index:60}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,40px);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transition:all .4s var(--spring);z-index:80;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.empty{text-align:center;color:var(--sub);padding:30px 0;font-size:14px}
+
+/* sheet */
+.dim{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .35s;z-index:70}
+.dim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:440px;margin:0 auto;background:var(--bg);border-radius:28px 28px 0 0;padding:10px 18px 30px;transform:translateY(105%);transition:transform .5s var(--spring);z-index:71;max-height:86vh;overflow:auto}
+.sheet.on{transform:none}
+.grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.sheet h3{margin:14px 0 8px;font-size:13px;color:var(--sub);font-weight:600}
+.seg{display:flex;background:var(--card);border-radius:14px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;color:var(--text);font:inherit;font-size:13px;font-weight:600;padding:9px 4px;border-radius:11px;cursor:pointer;transition:all .3s var(--spring)}
+.seg button.on{background:var(--accent);color:#fff;transform:scale(1.03)}
+.themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.th{border:2px solid transparent;border-radius:16px;padding:8px 6px 6px;cursor:pointer;text-align:center;font-size:11px;font-weight:600;transition:transform .3s var(--spring)}
+.th:active{transform:scale(.9)}
+.th.on{border-color:var(--accent)}
+.th i{display:block;height:30px;border-radius:9px;margin-bottom:5px;position:relative;overflow:hidden}
+.th i::after{content:"";position:absolute;right:5px;bottom:5px;width:12px;height:12px;border-radius:50%}
+.sw{display:flex;gap:10px;flex-wrap:wrap}
+.sw button{width:30px;height:30px;border-radius:50%;border:3px solid var(--bg);box-shadow:0 0 0 2px transparent;cursor:pointer;transition:transform .3s var(--spring)}
+.sw button.on{box-shadow:0 0 0 2px var(--text);transform:scale(1.15)}
+.fld{background:var(--card);border-radius:14px;padding:12px 14px;margin-top:8px;display:flex;align-items:center;gap:10px;font-size:14px}
+.fld input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit;text-align:right}
+.days{display:flex;gap:6px;margin-top:8px}
+.days button{flex:1;border:0;border-radius:11px;padding:9px 0;background:var(--card);color:var(--sub);font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .3s var(--spring)}
+.days button.on{background:var(--accent);color:#fff}
+.save{width:100%;margin-top:16px;border:0;border-radius:16px;padding:14px;background:var(--accent);color:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:transform .3s var(--spring)}
+.save:active{transform:scale(.96)}
+.note{font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.45}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
+
+.login{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px}
+.login form{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
+.login h2{margin:0;font-size:32px;letter-spacing:-1px}
+.login p{margin:0 0 6px;color:var(--sub);font-size:14px}
+.login input{border:0;outline:0;background:var(--card);color:var(--text);font:inherit;font-size:16px;padding:14px 16px;border-radius:16px}
+#lerr{color:var(--danger);font-size:13px;min-height:16px}
+.fld input[type=checkbox]{flex:none;width:22px;height:22px;accent-color:var(--accent)}
+.fld input[type=number]{flex:none;width:64px}
+.fld select{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit;text-align:right}
+.fld .g{color:var(--sub)}
+.save.alt{background:var(--card);color:var(--text);margin-top:8px}
+.save.out{background:transparent;color:var(--danger);margin-top:2px}
+</style>
+</head>
+<body>
+<div class="login" id="login">
+  <form id="lf">
+    <h2>🐸 Frog Quest</h2>
+    <p id="lmsg">Masuk dulu.</p>
+    <input id="le" type="email" placeholder="Email" autocomplete="username" required>
+    <input id="lp" type="password" placeholder="Password" autocomplete="current-password" required>
+    <button class="save" type="submit" style="margin-top:6px">Masuk</button>
+    <div id="lerr"></div>
+  </form>
+</div>
+
+<div class="app">
+  <div class="top">
+    <div><h1 id="date"></h1><h2 id="greet">Makan frog dulu.</h2></div>
+    <button class="icon-btn" id="gear" aria-label="Pengaturan">⚙︎</button>
+  </div>
+
+  <section class="score">
+    <div class="ring">
+      <svg width="92" height="92" viewBox="0 0 92 92"><circle class="bg" cx="46" cy="46" r="38"/><circle class="fg" id="fg" cx="46" cy="46" r="38"/></svg>
+      <div class="mid"><div><span id="cnt">0/0</span><small>selesai</small></div></div>
+    </div>
+    <div class="stats">
+      <div class="pts"><b id="pts">0</b><span>poin</span></div>
+      <div class="chips"><span class="chip">🔥 <span id="streak">0</span> hari</span><span class="chip f" id="frogchip">🐸 belum</span></div>
+      <div class="lvl"><i id="lvl"></i></div>
+      <div class="lvltxt" id="lvltxt"></div>
+    </div>
+  </section>
+
+  <div class="seg" id="vseg" style="margin:14px 0 0"><button data-v="list">☰ Tampilan Daftar</button><button data-v="grid" class="on">▦ Tampilan Kartu</button></div>
+  <div class="sizebar" id="sizebar"><span>Kecil</span><input type="range" id="sz" min="64" max="200" step="4" value="80" aria-label="Ukuran kartu"><span>Besar</span><b id="szv"></b></div>
+
+  <form class="add" id="form" autocomplete="off">
+    <input type="text" id="inp" placeholder="Tulis tugas, tekan enter" maxlength="80">
+    <input type="time" id="inpTime" value="09:00">
+    <button type="submit" aria-label="Tambah">+</button>
+  </form>
+  <div class="tip" id="tip" style="margin:4px 0 12px"></div>
+
+  <div id="list"></div>
+</div>
+
+<canvas id="cf"></canvas>
+<div class="trash" id="zT">🗑 Lepas di sini untuk hapus</div>
+<div class="toast" id="toast"></div>
+<div class="dim" id="dim"></div>
+
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h3>Tema</h3>
+  <div class="themes" id="themes"></div>
+  <h3>Warna aksen</h3>
+  <div class="sw" id="sw"></div>
+  <h3>Font</h3>
+  <div class="seg" id="fonts" style="flex-wrap:wrap"></div>
+  <div class="note" id="fontnote"></div>
+
+  <h3>Email dan reminder</h3>
+  <label class="fld">Kirim ke email<input type="email" id="email" placeholder="nama@email.com"></label>
+  <label class="fld">Zona waktu<select id="tz"><option value="Asia/Jakarta">WIB (Jakarta)</option><option value="Asia/Makassar">WITA (Makassar)</option><option value="Asia/Jayapura">WIT (Jayapura)</option></select></label>
+  <div class="seg" id="mode" style="margin-top:8px"><button data-m="routine">Rutinitas</button><button data-m="task">Task khusus</button></div>
+  <div id="routineBox">
+    <label class="fld">Jam pengingat<input type="time" id="rtime" value="07:30"></label>
+    <div class="days" id="days"></div>
+    <label class="fld">Isi pesan<input type="text" id="rmsg" value="Frog lu hari ini: {frog}"></label>
+  </div>
+  <div id="taskBox" style="display:none"><div class="note">Isi jam di samping tombol + saat nambah tugas. Reminder dikirim ke email pas jam itu tiba.</div></div>
+
+  <h3>Laporan ke email</h3>
+  <label class="fld">Aktifkan laporan<input type="checkbox" id="rep_on"></label>
+  <label class="fld">Kirim tiap selesai<input type="number" id="rep_n" min="1" max="50" value="3"><span class="g">tugas</span></label>
+  <h3>Pengingat kalau lupa</h3>
+  <label class="fld">Aktifkan nudge<input type="checkbox" id="nudge_on"></label>
+  <label class="fld">Jam nudge<input type="time" id="nudge_time" value="15:00"></label>
+  <div class="note">Nudge dikirim kalau frog belum dimakan atau belum ada tugas selesai di jam itu.</div>
+
+  <button class="save" id="save">Simpan pengaturan</button>
+  <button class="save alt" id="test">Kirim email tes</button>
+  <button class="save out" id="logout">Keluar</button>
+</div>
+
+<script src="config.js"></script>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const $=s=>document.querySelector(s);
+const cfg=window.APP_CONFIG||{};
+let sb=null;
+try{sb=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY)}catch(e){}
+let user=null;
+
+const THEMES={
+  salju:{n:'Salju',bg:'#f2f2f7',card:'#fff',text:'#1c1c1e',sub:'#8e8e93',line:'rgba(60,60,67,.12)',accent:'#0a84ff',frog:'#34c759'},
+  malam:{n:'Malam',bg:'#000',card:'#1c1c1e',text:'#f5f5f7',sub:'#8e8e93',line:'rgba(255,255,255,.12)',accent:'#0a84ff',frog:'#30d158'},
+  sakura:{n:'Sakura',bg:'#fff1f4',card:'#fff',text:'#3a1f28',sub:'#b28a96',line:'rgba(120,40,70,.1)',accent:'#ff4f81',frog:'#3ec28f'},
+  hutan:{n:'Hutan',bg:'#0f1a14',card:'#18271f',text:'#e8f3ec',sub:'#7fa190',line:'rgba(255,255,255,.1)',accent:'#4ade80',frog:'#a3e635'},
+  senja:{n:'Senja',bg:'#fff4e8',card:'#fffaf4',text:'#3b2414',sub:'#b08968',line:'rgba(120,70,20,.12)',accent:'#ff7a1a',frog:'#2fb36d'},
+  samudra:{n:'Samudra',bg:'#0a1628',card:'#12233d',text:'#e6f0ff',sub:'#7d93b5',line:'rgba(255,255,255,.1)',accent:'#38bdf8',frog:'#2dd4bf'},
+  neon:{n:'Neon',bg:'#120c24',card:'#1e1538',text:'#f3ecff',sub:'#9a86c9',line:'rgba(255,255,255,.1)',accent:'#c084fc',frog:'#a3ff5c'},
+  kopi:{n:'Kopi',bg:'#efe6dc',card:'#f8f2ea',text:'#33261c',sub:'#9a8574',line:'rgba(60,40,20,.12)',accent:'#a0603a',frog:'#6b8f4e'}
+};
+const FONTS={
+  ios:{n:'iOS',v:'-apple-system,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif',note:'Font sistem mirip SF Pro (iPhone/Mac).'},
+  shilling:{n:'Shilling',v:'"Unilever Shilling","Plus Jakarta Sans","Avenir Next","Segoe UI",system-ui,sans-serif',note:'Kalau file font Unilever Shilling dipasang di repo (lihat PANDUAN), otomatis kepakai. Sekarang pakai pengganti yang mirip.'},
+  rounded:{n:'Rounded',v:'ui-rounded,"SF Pro Rounded","Nunito","Varela Round",system-ui,sans-serif',note:'Bulat dan ramah.'},
+  serif:{n:'Serif',v:'ui-serif,"New York",Georgia,serif',note:'Elegan ala New York.'},
+  mono:{n:'Mono',v:'ui-monospace,"SF Mono",Menlo,monospace',note:'Gaya terminal, cocok buat vibe game.'}
+};
+const ACC=['#0a84ff','#ff375f','#ff9f0a','#30d158','#bf5af2','#64d2ff','#ffd60a','#ff6482'];
+
+const S={view:'grid',tw:80,theme:'salju',accent:null,font:'ios',tz:'Asia/Jakarta',mode:'routine',days:[1,2,3,4,5],rtime:'07:30',rmsg:'Frog lu hari ini: {frog}',
+  email:'',reportOn:true,reportEvery:3,nudgeOn:true,nudgeTime:'15:00',points:0,streak:0,lastDay:null,tasks:[]};
+let lastPts=0;
+
+const dayOf=(d,tz)=>new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+const today=()=>dayOf(new Date(),S.tz);
+const pts=t=>t.frog?50:10;
+const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CHK='<div class="chk"><svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 4.5"/></svg></div>';
+
+/* ---------- data (Supabase) ---------- */
+const rowFromS=()=>({user_id:user.id,email:S.email||null,tz:S.tz,mode:S.mode,routine_time:S.rtime,routine_days:S.days,routine_msg:S.rmsg,
+  report_enabled:S.reportOn,report_every:S.reportEvery,nudge_enabled:S.nudgeOn,nudge_time:S.nudgeTime,points:S.points,streak:S.streak,
+  last_active_day:S.lastDay,theme:S.theme,accent:S.accent,font:S.font,view:S.view,tile_w:S.tw,updated_at:new Date().toISOString()});
+function applyRow(r){
+  S.email=r.email||'';S.tz=r.tz||S.tz;S.mode=r.mode||'routine';S.rtime=String(r.routine_time||'07:30').slice(0,5);S.days=r.routine_days||[];
+  S.rmsg=r.routine_msg||S.rmsg;S.reportOn=!!r.report_enabled;S.reportEvery=r.report_every||3;S.nudgeOn=!!r.nudge_enabled;
+  S.nudgeTime=String(r.nudge_time||'15:00').slice(0,5);S.points=r.points||0;S.streak=r.streak||0;S.lastDay=r.last_active_day||null;
+  S.theme=THEMES[r.theme]?r.theme:'salju';S.accent=r.accent||null;S.font=FONTS[r.font]?r.font:'ios';S.view=r.view==='list'?'list':'grid';S.tw=r.tile_w||80;
+}
+let st;
+function saveSettings(now){
+  clearTimeout(st);
+  const run=async()=>{if(!user)return;const {error}=await sb.from('settings').upsert(rowFromS());if(error)toast('Gagal simpan: '+error.message)};
+  if(now)return run();st=setTimeout(run,700);
+}
+async function load(){
+  const {data:set}=await sb.from('settings').select('*').eq('user_id',user.id).maybeSingle();
+  if(set)applyRow(set);else{S.email=user.email||'';await saveSettings(true)}
+  const t=today();
+  await sb.from('tasks').update({day:t}).eq('done',false).lt('day',t); // tugas belum selesai ikut pindah ke hari ini
+  const {data,error}=await sb.from('tasks').select('*').eq('day',t).order('created_at');
+  if(error){toast('Gagal ambil tugas: '+error.message);return}
+  S.tasks=(data||[]).map(r=>({id:r.id,text:r.text,frog:r.frog,done:r.done,time:String(r.remind_time||'').slice(0,5),done_at:r.done_at}));
+}
+async function notify(type){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session)return;
+  try{
+    const r=await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({type})});
+    const j=await r.json().catch(()=>({}));
+    if(type==='test')toast(r.ok&&j.sent?'📧 Email tes terkirim':'Gagal: '+(j.error||'cek setelan Resend'));
+    else if(j.sent)toast('📧 Laporan dikirim ke email');
+    else if(!r.ok)toast('Laporan gagal: '+(j.error||r.status));
+  }catch(e){toast('Laporan gagal: jaringan')}
+}
+async function maybeReport(){
+  if(!S.email)return;
+  const td=today();
+  const n=S.tasks.filter(x=>x.done&&x.done_at&&dayOf(new Date(x.done_at),S.tz)===td).length;
+  if(S.tasks.length&&S.tasks.every(x=>x.done))await notify('all');
+  else if(S.reportOn&&n>0&&n%S.reportEvery===0)await notify('milestone');
+}
+
+/* ---------- tampilan ---------- */
+function applyTheme(){
+  const t=THEMES[S.theme],r=document.documentElement.style;
+  ['bg','card','text','sub','line','frog'].forEach(k=>r.setProperty('--'+k,t[k]));
+  r.setProperty('--accent',S.accent||t.accent);r.setProperty('--font',FONTS[S.font].v);
+}
+function applySize(){
+  const r=document.documentElement.style,k=(S.tw-64)/136;
+  r.setProperty('--tw',S.tw+'px');r.setProperty('--tf',(10+k*6).toFixed(1)+'px');
+  r.setProperty('--tp',(7+k*5).toFixed(1)+'px');r.setProperty('--tr',(13+k*9).toFixed(0)+'px');r.setProperty('--tg',(7+k*4).toFixed(0)+'px');
+  $('#sz').value=S.tw;$('#szv').textContent=Math.round(S.tw/96*100)+'%';
+}
+function countUp(el,from,to){const s=performance.now(),d=700;(function f(n){const p=Math.min(1,(n-s)/d);el.textContent=Math.round(from+(to-from)*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(f)})(s)}
+function renderScore(){
+  const d=S.tasks.filter(t=>t.done).length,n=S.tasks.length,T=S.points;
+  $('#cnt').textContent=d+'/'+n;
+  $('#fg').style.strokeDashoffset=238.76*(1-(n?d/n:0));
+  countUp($('#pts'),lastPts,T);lastPts=T;
+  $('#lvl').style.width=(T%100)+'%';
+  $('#lvltxt').textContent='Level '+(Math.floor(T/100)+1)+' · '+(100-T%100)+' poin lagi naik level';
+  $('#streak').textContent=S.streak;
+  const f=S.tasks.find(t=>t.frog);
+  $('#frogchip').textContent=!f?'🐸 belum dipilih':f.done?'🐸 termakan!':'🐸 menunggu';
+  $('#greet').textContent=f&&f.done?'Frog habis. Sisanya santai.':'Makan frog dulu.';
+}
+function rects(){const m={};document.querySelectorAll('[data-id]').forEach(r=>m[r.dataset.id]=r.getBoundingClientRect());return m}
+function tileHTML(t,newId){const mt=S.mode==='task';
+  return `<div class="tile ${t.frog?'frog':''} ${t.done?'done':''} ${t.id===newId?'enter':''}" data-id="${t.id}">
+    <div class="top2">${CHK}<div class="pill">+${pts(t)}</div></div>
+    <div class="tt"><b>${esc(t.text)}</b>${t.time&&mt?`<em>⏰ ${t.time}</em>`:''}</div></div>`}
+function render(newId,skipFlip){
+  const before=skipFlip?{}:rects();
+  const L=[...S.tasks].sort((a,b)=>(b.frog-a.frog)||(a.done-b.done));
+  const mt=S.mode==='task';
+  document.querySelectorAll('#vseg button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.view));
+  $('#sizebar').style.display=S.view==='grid'?'flex':'none';
+  $('#tip').textContent=S.view==='grid'?'Tap = selesai · seret kartu ke slot 🐸 buat jadi prioritas · seret kartu hijau menjauh buat lepas · seret ke bawah buat hapus':'Tap = selesai · geser kanan = zona frog · geser kiri = hapus';
+  if(S.view==='grid'){
+    const hasF=L.some(t=>t.frog);
+    $('#list').innerHTML=`<div class="grid" id="zN">${hasF?'':'<div class="slot" id="zF">🐸</div>'}${L.map(t=>tileHTML(t,newId)).join('')}</div>${L.length?'':'<div class="ph">Kosong. Ketik tugas di atas.</div>'}`;
+  }else{
+    $('#list').innerHTML=L.length?L.map(t=>`
+    <div class="row" data-id="${t.id}">
+      <div class="hint r">🐸 Zona frog</div><div class="hint l">${t.frog?'Lepas frog':'Hapus'}</div>
+      <div class="card ${t.frog?'frog':''} ${t.done?'done':''} ${t.id===newId?'enter':''}">
+        ${CHK}
+        <div class="t"><b>${esc(t.text)}</b>${t.time&&mt?`<em>⏰ ${t.time}</em>`:''}${t.frog&&!t.done?'<em>Kerjain ini dulu</em>':''}</div>
+        <div class="pill">+${pts(t)}</div>
+      </div></div>`).join(''):'<div class="empty">Belum ada tugas. Ketik satu di atas.</div>';
+  }
+  const after=rects();
+  document.querySelectorAll('[data-id]').forEach(r=>{
+    const a=before[r.dataset.id],c=after[r.dataset.id];
+    if(a&&c&&(a.top!==c.top||a.left!==c.left)){r.animate([{transform:`translate(${a.left-c.left}px,${a.top-c.top}px)`},{transform:'none'}],{duration:520,easing:'cubic-bezier(.34,1.3,.64,1)'})}
+    r.classList.contains('tile')?bindTile(r):bindRow(r);
+  });
+  renderScore();
+}
+
+/* ---------- gestur ---------- */
+function bindRow(row){
+  const card=row.querySelector('.card'),id=row.dataset.id,hr=row.querySelector('.hint.r'),hl=row.querySelector('.hint.l');
+  let sx=0,dx=0,down=false,moved=false;
+  card.addEventListener('pointerdown',e=>{down=true;moved=false;sx=e.clientX;dx=0;card.classList.add('drag');card.setPointerCapture(e.pointerId)});
+  card.addEventListener('pointermove',e=>{if(!down)return;dx=e.clientX-sx;if(Math.abs(dx)>6)moved=true;if(!moved)return;
+    const x=dx*.7;card.style.transform=`translateX(${x}px) rotate(${x/40}deg)`;hr.style.opacity=dx>0?Math.min(1,dx/80):0;hl.style.opacity=dx<0?Math.min(1,-dx/80):0});
+  const end=e=>{if(!down)return;down=false;card.classList.remove('drag');card.style.transform='';hr.style.opacity=hl.style.opacity=0;
+    const t=S.tasks.find(x=>x.id===id);if(!t)return;
+    if(!moved){toggleDone(t,card,e);return}
+    if(dx>70){setFrog(t)}else if(dx<-70){t.frog?unfrog(t):remove(t)}};
+  card.addEventListener('pointerup',end);card.addEventListener('pointercancel',end);
+}
+function frogTarget(dragId){return document.querySelector('#zF')||[...document.querySelectorAll('.tile.frog:not(.done)')].find(e=>e.dataset.id!==dragId)}
+function zoneAt(x,y,dragId){
+  const inR=el=>{if(!el)return false;const r=el.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom};
+  if($('#zT').classList.contains('on')&&inR($('#zT')))return 'T';
+  if(inR(frogTarget(dragId)))return 'F';
+  if(inR($('#zN')))return 'N';
+  return null;
+}
+function hover(x,y,dragId){const z=zoneAt(x,y,dragId);
+  document.querySelectorAll('.over').forEach(e=>e.classList.remove('over'));
+  const el=z==='T'?$('#zT'):z==='F'?frogTarget(dragId):z==='N'?$('#zN'):null;el&&el.classList.add('over')}
+function bindTile(el){
+  const id=el.dataset.id;let sx=0,sy=0,md=0,down=false,moved=false;
+  el.addEventListener('pointerdown',e=>{down=true;moved=false;sx=e.clientX;sy=e.clientY;el.setPointerCapture(e.pointerId)});
+  el.addEventListener('pointermove',e=>{if(!down)return;const dx=e.clientX-sx,dy=e.clientY-sy;md=Math.hypot(dx,dy);
+    if(!moved&&md>8){moved=true;el.classList.add('lift');$('#zT').classList.add('on');if(navigator.vibrate)navigator.vibrate(8)}
+    if(!moved)return;
+    el.style.transform=`translate(${dx}px,${dy}px) scale(1.06) rotate(${dx/70}deg)`;hover(e.clientX,e.clientY,id)});
+  const end=e=>{if(!down)return;down=false;
+    const t=S.tasks.find(x=>x.id===id),z=moved?zoneAt(e.clientX,e.clientY,id):null;
+    document.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));$('#zT').classList.remove('on');
+    el.classList.remove('lift');el.style.transform='';
+    if(!t)return;
+    if(!moved){toggleDone(t,el,e);return}
+    if(z==='F'&&!t.frog)setFrog(t);
+    else if(z==='N'&&t.frog&&md>70)unfrog(t);
+    else if(z==='T')remove(t)};
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+}
+
+/* ---------- aksi tugas ---------- */
+async function toggleDone(t,card,e){
+  t.done=!t.done;t.done_at=t.done?new Date().toISOString():null;
+  S.points=Math.max(0,S.points+(t.done?1:-1)*pts(t));
+  if(t.done){
+    const td=today();
+    if(S.lastDay!==td){const y=dayOf(new Date(Date.now()-864e5),S.tz);S.streak=S.lastDay===y?S.streak+1:1;S.lastDay=td}
+    card.classList.add('pop');float('+'+pts(t),e.clientX,e.clientY);burst(e.clientX,e.clientY,t.frog?90:26);
+    if(t.frog)toast('🐸 Frog termakan! +50 poin');
+    if(S.tasks.every(x=>x.done))setTimeout(()=>{burst(innerWidth/2,innerHeight/3,140);toast('Semua beres. Mantap!')},400);
+  }
+  render();
+  if(String(t.id).startsWith('tmp'))return;
+  const {error}=await sb.from('tasks').update({done:t.done,done_at:t.done_at}).eq('id',t.id);
+  if(error){toast('Gagal simpan: '+error.message);return}
+  await saveSettings(true);
+  if(t.done)await maybeReport();
+}
+async function setFrog(t){
+  if(t.done){toast('Tugas selesai nggak bisa jadi frog');render();return}
+  S.tasks.forEach(x=>{if(!x.done)x.frog=false});t.frog=true;toast('🐸 Frog hari ini: '+t.text);render();
+  const el=document.querySelector(`[data-id="${t.id}"]`);if(el){const r=el.getBoundingClientRect();burst(r.left+40,r.top+20,24)}
+  if(String(t.id).startsWith('tmp'))return;
+  await sb.from('tasks').update({frog:false}).eq('done',false).eq('frog',true).neq('id',t.id);
+  await sb.from('tasks').update({frog:true}).eq('id',t.id);
+}
+async function unfrog(t){t.frog=false;toast('Frog dilepas');render();if(!String(t.id).startsWith('tmp'))await sb.from('tasks').update({frog:false}).eq('id',t.id)}
+async function remove(t){S.tasks=S.tasks.filter(x=>x!==t);toast('Tugas dihapus');render();if(!String(t.id).startsWith('tmp'))await sb.from('tasks').delete().eq('id',t.id)}
+
+$('#form').addEventListener('submit',async e=>{
+  e.preventDefault();const v=$('#inp').value.trim();if(!v||!user)return;
+  const tmp={id:'tmp'+Date.now(),text:v,frog:false,done:false,time:S.mode==='task'?$('#inpTime').value:'',done_at:null};
+  S.tasks.push(tmp);$('#inp').value='';render(tmp.id);
+  const {data,error}=await sb.from('tasks').insert({text:v,day:today(),remind_time:tmp.time||null}).select().single();
+  if(error){S.tasks=S.tasks.filter(x=>x!==tmp);render();toast('Gagal simpan: '+error.message);return}
+  tmp.id=data.id;render();
+});
+
+/* ---------- efek ---------- */
+function float(txt,x,y){const f=document.createElement('div');f.className='float';f.textContent=txt;f.style.left=x-14+'px';f.style.top=y-20+'px';document.body.appendChild(f);setTimeout(()=>f.remove(),1000)}
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2600)}
+const cv=$('#cf'),cx=cv.getContext('2d');let P=[],run=false;
+function size(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio}size();addEventListener('resize',size);
+function burst(x,y,n){const cs=getComputedStyle(document.documentElement);const cols=[cs.getPropertyValue('--accent'),cs.getPropertyValue('--frog'),'#ffd60a','#ff375f','#fff'];
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=3+Math.random()*7;P.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-4,r:2+Math.random()*3.5,c:cols[i%cols.length],l:1,rot:Math.random()*6,vr:(Math.random()-.5)*.4})}
+  if(!run){run=true;requestAnimationFrame(tick)}}
+function tick(){cx.clearRect(0,0,cv.width,cv.height);const k=devicePixelRatio;
+  P=P.filter(p=>p.l>0);P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.28;p.vx*=.985;p.l-=.014;p.rot+=p.vr;cx.save();cx.globalAlpha=Math.max(0,p.l);cx.translate(p.x*k,p.y*k);cx.rotate(p.rot);cx.fillStyle=p.c;cx.fillRect(-p.r*k,-p.r*k*.6,p.r*2*k,p.r*1.2*k);cx.restore()});
+  if(P.length)requestAnimationFrame(tick);else{run=false;cx.clearRect(0,0,cv.width,cv.height)}}
+
+/* ---------- pengaturan ---------- */
+function openSheet(o){$('#sheet').classList.toggle('on',o);$('#dim').classList.toggle('on',o)}
+$('#gear').onclick=()=>openSheet(true);$('#dim').onclick=()=>openSheet(false);
+function buildSettings(){
+  $('#themes').innerHTML=Object.entries(THEMES).map(([k,t])=>`<div class="th ${S.theme===k?'on':''}" data-k="${k}" style="background:${t.card};color:${t.text}"><i style="background:${t.bg}"><u style="position:absolute;right:5px;bottom:5px;width:12px;height:12px;border-radius:50%;background:${t.accent}"></u></i>${t.n}</div>`).join('');
+  document.querySelectorAll('.th').forEach(el=>el.onclick=()=>{S.theme=el.dataset.k;S.accent=null;applyTheme();buildSettings();render();saveSettings()});
+  $('#sw').innerHTML=ACC.map(c=>`<button data-c="${c}" class="${S.accent===c?'on':''}" style="background:${c}" aria-label="${c}"></button>`).join('');
+  document.querySelectorAll('#sw button').forEach(b=>b.onclick=()=>{S.accent=b.dataset.c;applyTheme();buildSettings();saveSettings()});
+  $('#fonts').innerHTML=Object.entries(FONTS).map(([k,f])=>`<button data-k="${k}" class="${S.font===k?'on':''}" style="font-family:${f.v}">${f.n}</button>`).join('');
+  document.querySelectorAll('#fonts button').forEach(b=>b.onclick=()=>{S.font=b.dataset.k;applyTheme();buildSettings();saveSettings()});
+  $('#fontnote').textContent=FONTS[S.font].note;
+  const D=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  $('#days').innerHTML=D.map((d,i)=>`<button type="button" data-d="${i}" class="${S.days.includes(i)?'on':''}">${d}</button>`).join('');
+  document.querySelectorAll('#days button').forEach(b=>b.onclick=()=>{const i=+b.dataset.d;S.days=S.days.includes(i)?S.days.filter(x=>x!==i):[...S.days,i].sort();buildSettings();saveSettings()});
+}
+function fillSettings(){
+  $('#email').value=S.email;$('#tz').value=S.tz;$('#rtime').value=S.rtime;$('#rmsg').value=S.rmsg;
+  $('#rep_on').checked=S.reportOn;$('#rep_n').value=S.reportEvery;$('#nudge_on').checked=S.nudgeOn;$('#nudge_time').value=S.nudgeTime;
+  setMode(S.mode);
+}
+function setMode(m,save){
+  S.mode=m;document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.m===m));
+  $('#routineBox').style.display=m==='routine'?'':'none';$('#taskBox').style.display=m==='task'?'':'none';
+  $('#form').classList.toggle('pertask',m==='task');render(null,true);if(save)saveSettings();
+}
+document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>setMode(b.dataset.m,true));
+document.querySelectorAll('#vseg button').forEach(b=>b.onclick=()=>{if(S.view===b.dataset.v)return;S.view=b.dataset.v;render(null,true);saveSettings()});
+$('#sz').addEventListener('input',e=>{S.tw=+e.target.value;applySize()});
+$('#sz').addEventListener('change',()=>saveSettings());
+$('#email').onchange=e=>{S.email=e.target.value.trim();saveSettings()};
+$('#tz').onchange=e=>{S.tz=e.target.value;saveSettings()};
+$('#rtime').onchange=e=>{S.rtime=e.target.value||S.rtime;saveSettings()};
+$('#rmsg').onchange=e=>{S.rmsg=e.target.value.trim()||S.rmsg;saveSettings()};
+$('#rep_on').onchange=e=>{S.reportOn=e.target.checked;saveSettings()};
+$('#rep_n').onchange=e=>{S.reportEvery=Math.min(50,Math.max(1,parseInt(e.target.value)||3));e.target.value=S.reportEvery;saveSettings()};
+$('#nudge_on').onchange=e=>{S.nudgeOn=e.target.checked;saveSettings()};
+$('#nudge_time').onchange=e=>{S.nudgeTime=e.target.value||S.nudgeTime;saveSettings()};
+const okMail=()=>/^\S+@\S+\.\S+$/.test(S.email);
+$('#save').onclick=async()=>{S.email=$('#email').value.trim();if(!okMail()){toast('Isi email yang valid dulu');return}await saveSettings(true);openSheet(false);toast('Pengaturan tersimpan')};
+$('#test').onclick=async()=>{S.email=$('#email').value.trim();if(!okMail()){toast('Isi email yang valid dulu');return}toast('Mengirim email tes...');await saveSettings(true);await notify('test')};
+$('#logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
+
+/* ---------- login ---------- */
+$('#lf').addEventListener('submit',async e=>{
+  e.preventDefault();$('#lerr').textContent='';
+  if(!sb){$('#lerr').textContent='Isi config.js dulu (SUPABASE_URL dan SUPABASE_ANON_KEY)';return}
+  const {data,error}=await sb.auth.signInWithPassword({email:$('#le').value.trim(),password:$('#lp').value});
+  if(error){$('#lerr').textContent='Email atau password salah';return}
+  user=data.user;await start();
+});
+async function start(){
+  await load();applyTheme();applySize();buildSettings();fillSettings();lastPts=0;render();
+  $('#login').style.display='none';
+}
+async function boot(){
+  $('#date').textContent=new Intl.DateTimeFormat('id-ID',{weekday:'long',day:'numeric',month:'long'}).format(new Date());
+  applyTheme();applySize();
+  if(!sb||String(cfg.SUPABASE_URL||'').includes('ISI_')){$('#lmsg').textContent='Config belum diisi.';$('#lerr').textContent='Isi config.js dulu (SUPABASE_URL dan SUPABASE_ANON_KEY)';return}
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){user=session.user;await start()}
+}
+boot();
+</script>
+</body>
+</html>

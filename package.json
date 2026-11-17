@@ -1,0 +1,8 @@
+{
+  "name": "frog-quest",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
