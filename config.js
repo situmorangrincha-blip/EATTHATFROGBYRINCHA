@@ -1,6 +1,4 @@
-// Isi dua nilai ini dari Supabase (Project Settings > API).
-// Anon key memang aman ditaruh di sini, data tetap dilindungi RLS + login.
 window.APP_CONFIG = {
-  SUPABASE_URL: "ISI_PROJECT_URL",
-  SUPABASE_ANON_KEY: "ISI_ANON_KEY"
+  SUPABASE_URL: "https://qhqoeinuobjlmygaxzbg.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFocW9laW51b2JqbG15Z2F4emJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4NjgyODUsImV4cCI6MjExMDQ0NDI4NX0.4f8ok-T3kEdADvUXvd4U-UvHKlxCYQ6koAWT7T0MhfI"
 };
